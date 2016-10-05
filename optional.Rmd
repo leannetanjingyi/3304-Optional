@@ -1,0 +1,181 @@
+?---
+title: "Optional Assignment"
+author: "Leanne Tan Jing Yi A0130872J D01"
+date: "8 September 2016"
+output: word_document
+bibliography: MyCollection.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pander)
+```
+
+This project was done using R because I feel that it is the easiest to display the method to replicate my results. 
+
+This document was generated using R Markdown. 
+
+
+```{r}
+  #CSV file was downloaded from REALIS. 
+
+  df <- read.csv("REALIS.csv")
+  #transformation of dataframe
+  df <- df[ 1:114,]
+  df$Vacancy.Rate.of.Private.Residential.Units <-
+        as.numeric(as.character(df$Vacancy.Rate.of.Private.Residential.Units))
+  
+  VRoPRU <- ts(df$Vacancy.Rate.of.Private.Residential.Units, 
+             start=c(1988, 1), end=c(2016, 2), frequency=4) 
+  plot(VRoPRU)
+
+```
+
+I decided to do a adf.test to see it is stationary as it appears not to be stationary. 
+
+```{r, echo=TRUE}
+
+  #test for stationary
+  library(tseries)
+  adft <- adf.test(VRoPRU)
+  pander(adft)
+  
+```
+
+Since the null hypothesis is not rejected, the process has a unit root. Thus differencing is required. 
+
+```{r, echo=TRUE}
+
+  library(forecast)
+
+  #differencing
+  #ndiffs estimate the number of differences required to make a given time series stationary
+  diffs <- ndiffs(VRoPRU, test = 'adf')
+  diffs
+  
+  #plot to see the differencing 
+  VRoPRU.diff <- diff(VRoPRU, differences = 1)
+  plot(VRoPRU.diff)
+
+```
+
+
+To find the optimal number of lags used in this model, I used the auto.arima function. The reason why I chose to use auto.arima as it can return the best ARIMA model according to the lowest AIC value (see ?auto.arima in R) 
+
+#ARIMA model 
+```{r}
+  
+  #Using Automated forecasting
+  library(forecast)
+  library(urca)
+  
+  # Automated forecasting using an ARIMA model
+  
+  fitted <- auto.arima(VRoPRU,
+                       stepwise=FALSE, 
+                       approximation=FALSE, 
+                       seasonal = FALSE,
+                       ic = c("aic"),
+                       test = c("adf"),
+                       trace = TRUE)
+  
+  
+  summary(fitted)
+  forecast(fitted, h = 1)
+  
+   #Graph with fitted values as well as prediction intervals of 95%
+  upper <- fitted(fitted) + 1.96*sqrt(fitted$sigma2)
+  lower <- fitted(fitted) - 1.96*sqrt(fitted$sigma2)
+  plot(VRoPRU, type="n", ylim=range(lower,upper))
+  polygon(c(time(VRoPRU),rev(time(VRoPRU))), c(upper,rev(lower)), 
+     col=rgb(0,0,0.6,0.2), border=FALSE)
+  lines(VRoPRU)
+  lines(fitted(fitted),col='red')
+  out <- (VRoPRU < lower | VRoPRU > upper)
+  points(time(VRoPRU)[out], VRoPRU[out], pch=19)
+  
+   arimaorder(fitted)
+
+```
+
+A nonseasonal ARIMA model is classified as an "ARIMA(p,d,q)" model, where:
+
+p is the number of autoregressive terms,
+d is the number of nonseasonal differences needed for stationarity, and
+q is the number of lagged forecast errors in the prediction equation.
+
+In this case, the ARIMA model returned was ARIMA(0,1,0), which is the random walk model. 
+The value of d = 1 coincide with the previous test on the number of differencing required to make the time series stationary. 
+
+
+
+#Random walk model
+The random walk model is very widely used for non-stationary data, particularly finance and economic data. Random walks also typically have long periods of apparent trends up or down and sudden, unpredictable changes in direction.
+
+
+```{r, eval=FALSE, include=FALSE}
+
+  #Forecasting using the differencing
+  fit <- arima(VRoPRU.diff)
+  pander(fit)
+  forecast(fit, h = 1)
+  
+  #Graph with fitted values as well as prediction intervals of 95%
+  upper <- fitted(fit) + 1.96*sqrt(fit$sigma2)
+  lower <- fitted(fit) - 1.96*sqrt(fit$sigma2)
+  plot(VRoPRU.diff, type="n", ylim=range(lower,upper))
+  polygon(c(time(VRoPRU.diff),rev(time(VRoPRU.diff))), c(upper,rev(lower)), 
+     col=rgb(0,0,0.6,0.2), border=FALSE)
+  lines(VRoPRU.diff)
+  lines(fitted(fit),col='red')
+  out <- (VRoPRU.diff < lower | VRoPRU.diff > upper)
+  points(time(VRoPRU.diff)[out], VRoPRU.diff[out], pch=19)
+```
+
+
+
+```{r, eval=FALSE, include=FALSE}
+#HoltWinters Model
+  #gamma = FALSE for a non-seasonal model fit. 
+
+  fit2 <- HoltWinters(VRoPRU,gamma=FALSE, start.periods = 1)
+  #Graph of fitted and Observed values
+  
+  fit2
+  plot(fit2)
+  forecast(fit2, h = 1)
+```
+
+
+
+```{r, eval=FALSE, include=FALSE}
+  #Forecast Accurancy 
+
+#ARIMA model 
+  accuracy(fitted(fitted), VRoPRU)
+  
+  #Holt-Winters Model
+  accuracy(fitted(fit2), VRoPRU)
+
+Mean absolute percentage error for ARIMA model is smaller, thus ARIMA is a better fit than Holtwinters. 
+Hence, I would use ARIMA's value for predicting the next quarter's vacancy rate. 
+
+ARIMA's values are shown as below. 
+```
+
+```{r}
+
+forecast(fitted, h = 1)
+```
+
+
+
+#References
+```{r, echo=FALSE}
+
+library(knitcitations)
+read.bibtex("MyCollection.bib")
+
+```
+
