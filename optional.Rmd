@@ -1,4 +1,4 @@
-?---
+---
 title: "Optional Assignment"
 author: "Leanne Tan Jing Yi A0130872J D01"
 date: "8 September 2016"
@@ -12,9 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(pander)
 ```
 
-This project was done using R because I feel that it is the easiest to display the method to replicate my results. 
-
-This document was generated using R Markdown. 
+This project was done using R because I feel that it is the easiest to display the method to replicate my results.This document was generated using R Markdown. 
 
 
 ```{r}
@@ -32,15 +30,29 @@ This document was generated using R Markdown.
 
 ```
 
-I decided to do a adf.test to see it is stationary as it appears not to be stationary. 
+As the data appears to be not stationary, a unit root test is required. Before doing the Augmented-Dickey-Fuller Unit Root Test, I selected the best number of lag based on AIC value. 
+
+```{r, echo=TRUE}
+
+  #number of lags
+   library(vars)
+    var <- VARselect(df$Vacancy.Rate.of.Private.Residential.Units,
+                   type = "none",
+                   lag.max = 50)
+    var
+     var$selection 
+```     
+
+Selection returns best number of lag as 1. 
 
 ```{r, echo=TRUE}
 
   #test for stationary
-  library(tseries)
-  adft <- adf.test(VRoPRU)
-  pander(adft)
+  library(urca)
+  urdf <- ur.df( y= df$Vacancy.Rate.of.Private.Residential.Units, type = "none", lags = 1, selectlags = "AIC")
+  summary(urdf)
   
+ 
 ```
 
 Since the null hypothesis is not rejected, the process has a unit root. Thus differencing is required. 
@@ -60,8 +72,7 @@ Since the null hypothesis is not rejected, the process has a unit root. Thus dif
 
 ```
 
-
-To find the optimal number of lags used in this model, I used the auto.arima function. The reason why I chose to use auto.arima as it can return the best ARIMA model according to the lowest AIC value (see ?auto.arima in R) 
+To validate my analaysis so far, I used the auto.arima function so that it can return the best ARIMA model according to the lowest AIC value (see ?auto.arima in R) 
 
 #ARIMA model 
 ```{r}
@@ -111,7 +122,7 @@ The value of d = 1 coincide with the previous test on the number of differencing
 
 
 #Random walk model
-The random walk model is very widely used for non-stationary data, particularly finance and economic data. Random walks also typically have long periods of apparent trends up or down and sudden, unpredictable changes in direction.
+The random walk model is very widely used for non-stationary data, particularly finance and economic data. Random walks also typically have long periods of apparent trends up or down and sudden, unpredictable changes in direction. ARIMA's forecasted values are shown as below. 
 
 
 ```{r, eval=FALSE, include=FALSE}
@@ -168,7 +179,6 @@ ARIMA's values are shown as below.
 
 forecast(fitted, h = 1)
 ```
-
 
 
 #References
